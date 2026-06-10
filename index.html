@@ -1,3 +1,14 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Controle Financeiro</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>💸 Controle Financeiro</h1>
+
 <form id="form">
   <input type="text" id="descricao" placeholder="Descrição" required>
 
@@ -24,3 +35,23 @@
 
   <button type="submit">Adicionar</button>
 </form>
+
+<hr>
+
+<div class="container">
+  <div>
+    <h2>💰 Ciclo dia 1</h2>
+    <ul id="lista1"></ul>
+    <h3 id="total1"></h3>
+  </div>
+
+  <div>
+    <h2>💰 Ciclo dia 15</h2>
+    <ul id="lista15"></ul>
+    <h3 id="total15"></h3>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
