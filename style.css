@@ -4,24 +4,14 @@ body {
   background: #f5f5f5;
 }
 
-h1 {
-  text-align: center;
-}
-
 form {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  justify-content: center;
 }
 
 input, select, button {
   padding: 8px;
-  font-size: 14px;
-}
-
-button {
-  cursor: pointer;
 }
 
 .container {
@@ -37,12 +27,8 @@ ul {
 }
 
 li {
+  background: white;
   margin-bottom: 10px;
   padding: 10px;
-  background: white;
-  border-radius: 6px;
-}
-
-button {
-  margin: 3px;
+  border-radius: 5px;
 }
