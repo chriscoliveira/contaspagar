@@ -1,53 +1,26 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8">
-  <title>Controle Financeiro</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-
-<h1>💸 Controle Financeiro</h1>
-
 <form id="form">
   <input type="text" id="descricao" placeholder="Descrição" required>
-  <input type="number" id="valor" placeholder="Valor total" required>
 
-  <input type="number" id="parcelas" placeholder="Parcelas (1 = à vista)" value="1">
+  <input type="number" step="0.01" id="valor" placeholder="Valor (ex: 123.45)" required>
+
+  <input type="number" id="parcelas" value="1" min="1">
 
   <select id="cartao">
-    <option value="Nubank">Nubank</option>
-    <option value="Itau">Itaú</option>
-    <option value="Inter">Inter</option>
-    <option value="Outro">Outro</option>
+    <option>Nubank</option>
+    <option>Itaú</option>
+    <option>Inter</option>
   </select>
 
   <input type="date" id="data" required>
 
-  <select id="vencimento">
-    <option value="1">Vencimento dia 1</option>
-    <option value="15">Vencimento dia 15</option>
+  <select id="ciclo">
+    <option value="1">Pagar com salário dia 1</option>
+    <option value="15">Pagar com salário dia 15</option>
   </select>
+
+  <label>
+    <input type="checkbox" id="fixo"> Conta fixa mensal
+  </label>
 
   <button type="submit">Adicionar</button>
 </form>
-
-<hr>
-
-<div class="container">
-  <div>
-    <h2>💰 Ciclo dia 1</h2>
-    <ul id="lista1"></ul>
-    <h3 id="total1"></h3>
-  </div>
-
-  <div>
-    <h2>💰 Ciclo dia 15</h2>
-    <ul id="lista15"></ul>
-    <h3 id="total15"></h3>
-  </div>
-</div>
-
-<script src="script.js"></script>
-</body>
-</html>
