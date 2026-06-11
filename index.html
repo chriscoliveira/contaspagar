@@ -1,62 +1,890 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<title>Controle Financeiro</title>
-<link rel="stylesheet" href="style.css">
-</head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>💰 Financeiro</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f172a; --card: #1e293b; --border: #334155;
+      --primary: #6366f1; --primary-h: #4f46e5;
+      --green: #22c55e; --red: #ef4444; --yellow: #f59e0b; --blue: #60a5fa;
+      --text: #f1f5f9; --muted: #94a3b8;
+    }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
+    /* ── Login ── */
+    .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 1rem; }
+    .login-box { background: var(--card); border: 1px solid var(--border); border-radius: 1rem; padding: 2.5rem; width: 100%; max-width: 360px; }
+    .login-box h1 { font-size: 1.5rem; font-weight: 700; color: var(--primary); margin-bottom: 0.3rem; }
+    .login-box p { color: var(--muted); font-size: 0.875rem; margin-bottom: 2rem; }
+
+    /* ── Layout ── */
+    #app { display: flex; min-height: 100vh; }
+    .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 220px; background: var(--card); border-right: 1px solid var(--border); padding: 1.5rem 1rem; display: flex; flex-direction: column; gap: 4px; z-index: 10; }
+    .sidebar-logo { font-size: 1.1rem; font-weight: 800; color: var(--primary); padding: 0 0.75rem; margin-bottom: 1rem; }
+    .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.75rem; border-radius: 0.5rem; cursor: pointer; color: var(--muted); font-size: 0.875rem; transition: all 0.15s; user-select: none; }
+    .nav-item:hover { background: var(--border); color: var(--text); }
+    .nav-item.active { background: rgba(99,102,241,0.15); color: #818cf8; font-weight: 500; }
+    .sidebar-sep { flex: 1; }
+    .main { margin-left: 220px; padding: 2rem; width: 100%; }
+
+    /* ── Page header ── */
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+    .page-title { font-size: 1.4rem; font-weight: 700; }
+
+    /* ── Cards grid ── */
+    .cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.75rem; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.25rem; }
+    .stat-label { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.4rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+    .stat-value { font-size: 1.6rem; font-weight: 700; }
+    .stat-value.red { color: var(--red); }
+    .stat-value.green { color: var(--green); }
+    .stat-value.yellow { color: var(--yellow); }
+    .stat-value.blue { color: var(--blue); }
+
+    /* ── Chart card ── */
+    .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 1.75rem; }
+    .chart-title { font-size: 0.85rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 1rem; }
+
+    /* ── Filters bar ── */
+    .filters { display: flex; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: flex-end; }
+    .fg { display: flex; flex-direction: column; gap: 0.3rem; }
+    .fg label { font-size: 0.75rem; color: var(--muted); font-weight: 500; }
+    select, input[type="month"], input[type="date"], input[type="text"], input[type="number"], input[type="password"] {
+      background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 0.5rem 0.75rem; border-radius: 0.5rem; font-size: 0.875rem; outline: none; font-family: inherit;
+    }
+    select:focus, input:focus { border-color: var(--primary); }
+
+    /* ── Ciclo tabs ── */
+    .tab-group { display: flex; background: var(--bg); border: 1px solid var(--border); border-radius: 0.5rem; overflow: hidden; }
+    .tab-btn { padding: 0.48rem 0.9rem; cursor: pointer; font-size: 0.82rem; color: var(--muted); transition: all 0.15s; user-select: none; white-space: nowrap; }
+    .tab-btn.active { background: var(--primary); color: #fff; }
+
+    /* ── Buttons ── */
+    .btn { padding: 0.5rem 1rem; border-radius: 0.5rem; border: none; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.15s; font-family: inherit; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-h); }
+    .btn-success { background: var(--green); color: #fff; }
+    .btn-success:hover { background: #16a34a; }
+    .btn-danger { background: var(--red); color: #fff; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: var(--border); color: var(--text); }
+    .btn-sm { padding: 0.28rem 0.6rem; font-size: 0.8rem; }
+
+    /* ── Table ── */
+    .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 0.75rem; overflow: hidden; }
+    .table-empty { padding: 2.5rem; text-align: center; color: var(--muted); font-size: 0.875rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: var(--bg); padding: 0.7rem 1rem; text-align: left; font-size: 0.75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+    td { padding: 0.7rem 1rem; border-top: 1px solid var(--border); font-size: 0.875rem; }
+    tbody tr:hover td { background: rgba(255,255,255,0.03); }
+    .tr-vencido td { background: rgba(239,68,68,0.06); }
+    .tr-pago td { opacity: 0.45; }
+
+    /* ── Badge ── */
+    .badge { display: inline-flex; align-items: center; padding: 0.18rem 0.55rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+    .badge-green { background: rgba(34,197,94,.18); color: var(--green); }
+    .badge-red { background: rgba(239,68,68,.18); color: var(--red); }
+    .badge-yellow { background: rgba(245,158,11,.18); color: var(--yellow); }
+    .badge-gray { background: rgba(148,163,184,.15); color: var(--muted); }
+
+    /* ── Resumo bar ── */
+    .resumo-bar { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem; font-size: 0.875rem; color: var(--muted); }
+    .resumo-bar strong { margin-left: 0.3rem; }
+
+    /* ── Cartões grid ── */
+    .cartoes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .cartao-tile { border-radius: 1rem; padding: 1.25rem; min-height: 130px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
+    .cartao-tile::before { content: ''; position: absolute; top: -30px; right: -30px; width: 100px; height: 100px; border-radius: 50%; background: rgba(255,255,255,0.08); }
+    .cartao-nome { font-weight: 700; font-size: 1rem; }
+    .cartao-info { font-size: 0.78rem; opacity: 0.75; margin-top: 0.2rem; }
+    .cartao-actions { display: flex; gap: 0.5rem; }
+
+    /* ── Modal ── */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .modal { background: var(--card); border: 1px solid var(--border); border-radius: 1rem; padding: 1.75rem; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+    .modal h2 { font-size: 1.05rem; font-weight: 700; margin-bottom: 1.25rem; }
+    .form-group { margin-bottom: 0.9rem; }
+    .form-group label { display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 0.35rem; font-weight: 500; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+    .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+
+    /* ── Misc ── */
+    .check-pago { width: 17px; height: 17px; cursor: pointer; accent-color: var(--green); }
+    .td-actions { display: flex; gap: 0.35rem; }
+
+    /* ── Responsive ── */
+    @media (max-width: 1100px) { .cards-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .main { margin-left: 0; padding: 1rem; }
+      .cards-grid { grid-template-columns: 1fr 1fr; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
 <body>
 
-<h1>💸 Controle Financeiro</h1>
-
-<form id="form">
-  <input type="text" id="descricao" placeholder="Descrição" required>
-
-  <input type="number" step="0.01" id="valor" placeholder="Valor" required>
-
-  <input type="number" id="parcelas" value="1" min="1">
-
-  <select id="cartao">
-    <option>Nubank</option>
-    <option>Itaú</option>
-    <option>Inter</option>
-  </select>
-
-  <input type="date" id="data" required>
-
-  <select id="ciclo">
-    <option value="1">Salário dia 1</option>
-    <option value="15">Salário dia 15</option>
-  </select>
-
-  <label>
-    <input type="checkbox" id="fixo"> Conta fixa
-  </label>
-
-  <button type="submit">Adicionar</button>
-</form>
-
-<hr>
-
-<label>Selecionar mês:</label>
-<input type="month" id="mesFiltro">
-
-<div class="container">
-  <div>
-    <h2>💰 Dia 1</h2>
-    <ul id="lista1"></ul>
-    <h3 id="total1"></h3>
-  </div>
-
-  <div>
-    <h2>💰 Dia 15</h2>
-    <ul id="lista15"></ul>
-    <h3 id="total15"></h3>
+<!-- ══ LOGIN ══ -->
+<div id="login-screen" class="login-wrap">
+  <div class="login-box">
+    <h1>💰 Financeiro</h1>
+    <p>Controle de contas a pagar e receber</p>
+    <div class="form-group">
+      <label>Senha</label>
+      <input type="password" id="login-senha" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter')login()">
+    </div>
+    <button class="btn btn-primary" style="width:100%; margin-top:0.5rem" onclick="login()">Entrar</button>
+    <p id="login-erro" style="color:var(--red);font-size:0.8rem;margin-top:0.75rem;display:none">Senha incorreta.</p>
   </div>
 </div>
 
-<script src="script.js"></script>
+<!-- ══ APP ══ -->
+<div id="app" style="display:none">
+  <aside class="sidebar">
+    <div class="sidebar-logo">💰 Financeiro</div>
+    <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">📊 Dashboard</div>
+    <div class="nav-item" data-page="pagar" onclick="navigate('pagar')">💸 Contas a Pagar</div>
+    <div class="nav-item" data-page="receber" onclick="navigate('receber')">💚 A Receber</div>
+    <div class="nav-item" data-page="cartoes" onclick="navigate('cartoes')">💳 Cartões</div>
+    <div class="nav-item" data-page="fixas" onclick="navigate('fixas')">🔁 Contas Fixas</div>
+    <div class="sidebar-sep"></div>
+    <div class="nav-item" onclick="logout()">🚪 Sair</div>
+  </aside>
+  <main class="main" id="main-content"></main>
+</div>
+
+<!-- ══ MODAL ══ -->
+<div id="modal-root"></div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────
+const API_URL = 'https://financeiro.SEU-USUARIO.workers.dev'; // ← altere aqui
+
+// ── STATE ───────────────────────────────────────────
+let token = localStorage.getItem('fin_token');
+let cartoes = [];
+let chartRef = null;
+let contasPagarCache = [];
+let contasReceberCache = [];
+
+// ── HELPERS ─────────────────────────────────────────
+const fmt = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+const fmtDate = d => { if (!d) return '-'; const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
+const today = () => new Date().toISOString().slice(0, 10);
+const currMonth = () => new Date().toISOString().slice(0, 7);
+const isVencido = (date, done) => !done && date < today();
+const isHoje = (date, done) => !done && date === today();
+
+// ── API ──────────────────────────────────────────────
+async function api(method, path, body) {
+  try {
+    const res = await fetch(API_URL + path, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (res.status === 401) { logout(); return null; }
+    return await res.json();
+  } catch (e) { console.error(e); alert('Erro de conexão com a API.'); return null; }
+}
+
+// ── AUTH ─────────────────────────────────────────────
+async function login() {
+  const senha = document.getElementById('login-senha').value;
+  const data = await fetch(API_URL + '/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ senha }),
+  }).then(r => r.json()).catch(() => null);
+
+  if (data?.token) {
+    token = data.token;
+    localStorage.setItem('fin_token', token);
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    await loadCartoes();
+    navigate('dashboard');
+  } else {
+    document.getElementById('login-erro').style.display = 'block';
+  }
+}
+
+function logout() {
+  token = null;
+  localStorage.removeItem('fin_token');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+// ── NAVIGATION ───────────────────────────────────────
+function navigate(page) {
+  document.querySelectorAll('.nav-item[data-page]').forEach(el =>
+    el.classList.toggle('active', el.dataset.page === page)
+  );
+  const m = document.getElementById('main-content');
+  m.innerHTML = '<div style="padding:2rem;color:var(--muted)">Carregando...</div>';
+  const pages = { dashboard: renderDashboard, pagar: renderContasPagar, receber: renderContasReceber, cartoes: renderCartoes, fixas: renderContasFixas };
+  pages[page]?.();
+}
+
+// ── CARTÕES (cache) ──────────────────────────────────
+async function loadCartoes() {
+  cartoes = await api('GET', '/cartoes') || [];
+}
+
+function cartaoBadge(item) {
+  if (!item.cartao_id) return `<span class="badge badge-gray">Dinheiro/Débito</span>`;
+  const cor = item.cartao_cor || '#6366f1';
+  return `<span class="badge" style="background:${cor}28;color:${cor}">${item.cartao_nome}</span>`;
+}
+
+// ── MODAL ─────────────────────────────────────────────
+function openModal(html) {
+  document.getElementById('modal-root').innerHTML =
+    `<div class="modal-overlay" onclick="if(event.target===this)closeModal()">${html}</div>`;
+}
+function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
+
+// ══════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════
+async function renderDashboard() {
+  const data = await api('GET', '/dashboard');
+  if (!data) return;
+
+  document.getElementById('main-content').innerHTML = `
+    <h2 class="page-title" style="margin-bottom:1.5rem">Dashboard</h2>
+    <div class="cards-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total a Pagar</div>
+        <div class="stat-value red">${fmt(data.totalPagar)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total a Receber</div>
+        <div class="stat-value green">${fmt(data.totalReceber)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Vence em 30 dias (pagar)</div>
+        <div class="stat-value yellow">${fmt(data.pagar30)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Vence em 30 dias (receber)</div>
+        <div class="stat-value blue">${fmt(data.receber30)}</div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Fluxo Mensal — Contas a Pagar</div>
+      <canvas id="chart-fluxo" height="90"></canvas>
+    </div>
+    ${data.vencendoHoje > 0 ? `<div style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:.75rem;padding:1rem;color:var(--yellow);font-size:.875rem">⚠️ Você tem <strong>${data.vencendoHoje} conta(s)</strong> vencendo hoje!</div>` : ''}
+  `;
+
+  if (chartRef) chartRef.destroy();
+  const ctx = document.getElementById('chart-fluxo').getContext('2d');
+  const labels = data.fluxo.map(f => { const [y,m] = f.mes.split('-'); return `${m}/${y}`; });
+  chartRef = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Total', data: data.fluxo.map(f => f.total), backgroundColor: 'rgba(99,102,241,.35)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 4 },
+        { label: 'Pago', data: data.fluxo.map(f => f.pago), backgroundColor: 'rgba(34,197,94,.35)', borderColor: '#22c55e', borderWidth: 1, borderRadius: 4 },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: '#94a3b8', font: { size: 12 } } } },
+      scales: {
+        x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(51,65,85,.5)' } },
+        y: { ticks: { color: '#94a3b8', callback: v => fmt(v) }, grid: { color: 'rgba(51,65,85,.5)' } },
+      },
+    },
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// CONTAS A PAGAR
+// ══════════════════════════════════════════════════════
+let pagarF = { mes: currMonth(), cartao_id: '', pago: '', ciclo: '' };
+
+async function renderContasPagar() {
+  const opts = cartoes.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header">
+      <h2 class="page-title">Contas a Pagar</h2>
+      <button class="btn btn-primary" onclick="modalNovaPagar()">+ Nova Conta</button>
+    </div>
+    <div class="filters">
+      <div class="fg"><label>Mês</label>
+        <input type="month" value="${pagarF.mes}" onchange="pagarF.mes=this.value;loadPagar()">
+      </div>
+      <div class="fg"><label>Cartão</label>
+        <select onchange="pagarF.cartao_id=this.value;loadPagar()">
+          <option value="">Todos os cartões</option>${opts}
+        </select>
+      </div>
+      <div class="fg"><label>Status</label>
+        <select onchange="pagarF.pago=this.value;loadPagar()">
+          <option value="">Todos</option>
+          <option value="0">Pendente</option>
+          <option value="1">Pago</option>
+        </select>
+      </div>
+      <div class="fg"><label>Ciclo de vencimento</label>
+        <div class="tab-group" id="ciclo-tabs">
+          <div class="tab-btn active" onclick="setCiclo('',this)">Todos</div>
+          <div class="tab-btn" onclick="setCiclo('1',this)">Até dia 15</div>
+          <div class="tab-btn" onclick="setCiclo('2',this)">Após dia 15</div>
+        </div>
+      </div>
+    </div>
+    <div id="resumo-pagar" class="resumo-bar"></div>
+    <div class="table-wrap" id="table-pagar"><div class="table-empty">Carregando...</div></div>
+  `;
+  loadPagar();
+}
+
+function setCiclo(v, el) {
+  pagarF.ciclo = v;
+  document.querySelectorAll('#ciclo-tabs .tab-btn').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  loadPagar();
+}
+
+async function loadPagar() {
+  const p = new URLSearchParams();
+  if (pagarF.mes) p.set('mes', pagarF.mes);
+  if (pagarF.cartao_id) p.set('cartao_id', pagarF.cartao_id);
+  if (pagarF.pago !== '') p.set('pago', pagarF.pago);
+  if (pagarF.ciclo) p.set('ciclo', pagarF.ciclo);
+
+  const data = await api('GET', `/contas_pagar?${p}`);
+  if (!data) return;
+  contasPagarCache = data;
+
+  const pendente = data.reduce((s, c) => s + (c.pago ? 0 : c.valor), 0);
+  const pago = data.reduce((s, c) => s + (c.pago ? c.valor : 0), 0);
+
+  const resumo = document.getElementById('resumo-pagar');
+  if (resumo) resumo.innerHTML = `
+    <span>Pendente: <strong style="color:var(--red)">${fmt(pendente)}</strong></span>
+    <span>Pago: <strong style="color:var(--green)">${fmt(pago)}</strong></span>
+    <span>Total: <strong style="color:var(--text)">${fmt(pendente + pago)}</strong></span>
+  `;
+
+  const wrap = document.getElementById('table-pagar');
+  if (!wrap) return;
+  if (!data.length) { wrap.innerHTML = '<div class="table-empty">Nenhuma conta encontrada.</div>'; return; }
+
+  wrap.innerHTML = `<table>
+    <thead><tr>
+      <th>✓</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Cartão</th><th>Parcela</th><th></th>
+    </tr></thead>
+    <tbody>
+      ${data.map(c => {
+        const venc = isVencido(c.vencimento, c.pago);
+        const hj = isHoje(c.vencimento, c.pago);
+        return `<tr class="${c.pago ? 'tr-pago' : venc ? 'tr-vencido' : ''}">
+          <td><input type="checkbox" class="check-pago" ${c.pago ? 'checked' : ''} onchange="togglePago('pagar',${c.id},this.checked)"></td>
+          <td>
+            ${c.descricao}
+            ${venc ? '<span class="badge badge-red" style="margin-left:.4rem">Vencido</span>' : ''}
+            ${hj ? '<span class="badge badge-yellow" style="margin-left:.4rem">Hoje</span>' : ''}
+          </td>
+          <td><strong>${fmt(c.valor)}</strong></td>
+          <td>${fmtDate(c.vencimento)}</td>
+          <td>${cartaoBadge(c)}</td>
+          <td>${c.total_parcelas > 1 ? `<span class="badge badge-gray">${c.parcela_atual}/${c.total_parcelas}</span>` : '-'}</td>
+          <td><div class="td-actions">
+            <button class="btn btn-ghost btn-sm" onclick="modalEditPagar(${c.id})">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="delPagar(${c.id})">🗑️</button>
+          </div></td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`;
+}
+
+async function togglePago(tipo, id, val) {
+  if (tipo === 'pagar') { await api('PUT', `/contas_pagar/${id}`, { pago: val ? 1 : 0 }); loadPagar(); }
+  else { await api('PUT', `/contas_receber/${id}`, { recebido: val ? 1 : 0 }); loadReceber(); }
+}
+
+async function delPagar(id) {
+  if (!confirm('Excluir esta conta?')) return;
+  await api('DELETE', `/contas_pagar/${id}`);
+  loadPagar();
+}
+
+// ── Modal Nova Conta Pagar ──
+function modalNovaPagar() {
+  const opts = cartoes.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+  openModal(`<div class="modal">
+    <h2>Nova Conta a Pagar</h2>
+    <div class="form-group"><label>Descrição *</label><input type="text" id="m-desc" placeholder="Ex: Conta de luz"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Valor Total (R$) *</label><input type="number" id="m-val" step="0.01" min="0" placeholder="0.00"></div>
+      <div class="form-group"><label>1º Vencimento *</label><input type="date" id="m-venc" value="${today()}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Cartão</label>
+        <select id="m-cartao"><option value="">Sem cartão</option>${opts}</select>
+      </div>
+      <div class="form-group"><label>Parcelas</label><input type="number" id="m-parc" value="1" min="1" max="60"></div>
+    </div>
+    <div class="form-group"><label>Categoria</label><input type="text" id="m-cat" placeholder="Ex: Alimentação"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarPagar()">Salvar</button>
+    </div>
+  </div>`);
+}
+
+async function salvarPagar() {
+  const descricao = document.getElementById('m-desc').value.trim();
+  const valor = parseFloat(document.getElementById('m-val').value);
+  const vencimento = document.getElementById('m-venc').value;
+  const cartao_id = document.getElementById('m-cartao').value || null;
+  const total_parcelas = parseInt(document.getElementById('m-parc').value) || 1;
+  const categoria = document.getElementById('m-cat').value;
+  if (!descricao || !valor || !vencimento) return alert('Preencha os campos obrigatórios.');
+  await api('POST', '/contas_pagar', { descricao, valor, vencimento, cartao_id, total_parcelas, categoria });
+  closeModal();
+  loadPagar();
+}
+
+// ── Modal Editar Conta Pagar ──
+function modalEditPagar(id) {
+  const c = contasPagarCache.find(x => x.id === id);
+  if (!c) return;
+  const opts = cartoes.map(x => `<option value="${x.id}" ${x.id==c.cartao_id?'selected':''}>${x.nome}</option>`).join('');
+  openModal(`<div class="modal">
+    <h2>Editar Conta</h2>
+    <div class="form-group"><label>Descrição</label><input type="text" id="m-desc" value="${c.descricao}"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Valor (R$)</label><input type="number" id="m-val" step="0.01" value="${c.valor}"></div>
+      <div class="form-group"><label>Vencimento</label><input type="date" id="m-venc" value="${c.vencimento}"></div>
+    </div>
+    <div class="form-group"><label>Cartão</label>
+      <select id="m-cartao"><option value="">Sem cartão</option>${opts}</select>
+    </div>
+    <div class="form-group"><label>Categoria</label><input type="text" id="m-cat" value="${c.categoria||''}"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="atualizarPagar(${id})">Salvar</button>
+    </div>
+  </div>`);
+}
+
+async function atualizarPagar(id) {
+  const descricao = document.getElementById('m-desc').value.trim();
+  const valor = parseFloat(document.getElementById('m-val').value);
+  const vencimento = document.getElementById('m-venc').value;
+  const cartao_id = document.getElementById('m-cartao').value || null;
+  const categoria = document.getElementById('m-cat').value;
+  if (!descricao || !valor || !vencimento) return alert('Preencha os campos obrigatórios.');
+  await api('PUT', `/contas_pagar/${id}`, { descricao, valor, vencimento, cartao_id, categoria });
+  closeModal();
+  loadPagar();
+}
+
+// ══════════════════════════════════════════════════════
+// CONTAS A RECEBER
+// ══════════════════════════════════════════════════════
+let receberF = { mes: currMonth(), recebido: '' };
+
+async function renderContasReceber() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header">
+      <h2 class="page-title">Contas a Receber</h2>
+      <button class="btn btn-success" onclick="modalNovaReceber()">+ Nova Conta</button>
+    </div>
+    <div class="filters">
+      <div class="fg"><label>Mês</label>
+        <input type="month" value="${receberF.mes}" onchange="receberF.mes=this.value;loadReceber()">
+      </div>
+      <div class="fg"><label>Status</label>
+        <select onchange="receberF.recebido=this.value;loadReceber()">
+          <option value="">Todos</option>
+          <option value="0">Pendente</option>
+          <option value="1">Recebido</option>
+        </select>
+      </div>
+    </div>
+    <div id="resumo-receber" class="resumo-bar"></div>
+    <div class="table-wrap" id="table-receber"><div class="table-empty">Carregando...</div></div>
+  `;
+  loadReceber();
+}
+
+async function loadReceber() {
+  const p = new URLSearchParams();
+  if (receberF.mes) p.set('mes', receberF.mes);
+  if (receberF.recebido !== '') p.set('recebido', receberF.recebido);
+
+  const data = await api('GET', `/contas_receber?${p}`);
+  if (!data) return;
+  contasReceberCache = data;
+
+  const pendente = data.reduce((s, c) => s + (c.recebido ? 0 : c.valor), 0);
+  const recebido = data.reduce((s, c) => s + (c.recebido ? c.valor : 0), 0);
+
+  const resumo = document.getElementById('resumo-receber');
+  if (resumo) resumo.innerHTML = `
+    <span>Pendente: <strong style="color:var(--yellow)">${fmt(pendente)}</strong></span>
+    <span>Recebido: <strong style="color:var(--green)">${fmt(recebido)}</strong></span>
+  `;
+
+  const wrap = document.getElementById('table-receber');
+  if (!wrap) return;
+  if (!data.length) { wrap.innerHTML = '<div class="table-empty">Nenhuma conta encontrada.</div>'; return; }
+
+  wrap.innerHTML = `<table>
+    <thead><tr><th>✓</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Categoria</th><th></th></tr></thead>
+    <tbody>
+      ${data.map(c => {
+        const venc = isVencido(c.vencimento, c.recebido);
+        return `<tr class="${c.recebido ? 'tr-pago' : venc ? 'tr-vencido' : ''}">
+          <td><input type="checkbox" class="check-pago" ${c.recebido?'checked':''} onchange="togglePago('receber',${c.id},this.checked)"></td>
+          <td>${c.descricao}${venc?'<span class="badge badge-red" style="margin-left:.4rem">Atrasado</span>':''}</td>
+          <td><strong>${fmt(c.valor)}</strong></td>
+          <td>${fmtDate(c.vencimento)}</td>
+          <td>${c.categoria||'-'}</td>
+          <td><div class="td-actions">
+            <button class="btn btn-ghost btn-sm" onclick="modalEditReceber(${c.id})">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="delReceber(${c.id})">🗑️</button>
+          </div></td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`;
+}
+
+async function delReceber(id) {
+  if (!confirm('Excluir?')) return;
+  await api('DELETE', `/contas_receber/${id}`);
+  loadReceber();
+}
+
+function modalNovaReceber() {
+  openModal(`<div class="modal">
+    <h2>Nova Conta a Receber</h2>
+    <div class="form-group"><label>Descrição *</label><input type="text" id="m-desc" placeholder="Ex: Pagamento cliente"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Valor (R$) *</label><input type="number" id="m-val" step="0.01" min="0"></div>
+      <div class="form-group"><label>Vencimento *</label><input type="date" id="m-venc" value="${today()}"></div>
+    </div>
+    <div class="form-group"><label>Categoria</label><input type="text" id="m-cat" placeholder="Ex: Serviços"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-success" onclick="salvarReceber()">Salvar</button>
+    </div>
+  </div>`);
+}
+
+async function salvarReceber() {
+  const descricao = document.getElementById('m-desc').value.trim();
+  const valor = parseFloat(document.getElementById('m-val').value);
+  const vencimento = document.getElementById('m-venc').value;
+  const categoria = document.getElementById('m-cat').value;
+  if (!descricao || !valor || !vencimento) return alert('Preencha os campos obrigatórios.');
+  await api('POST', '/contas_receber', { descricao, valor, vencimento, categoria });
+  closeModal();
+  loadReceber();
+}
+
+function modalEditReceber(id) {
+  const c = contasReceberCache.find(x => x.id === id);
+  if (!c) return;
+  openModal(`<div class="modal">
+    <h2>Editar Conta</h2>
+    <div class="form-group"><label>Descrição</label><input type="text" id="m-desc" value="${c.descricao}"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Valor (R$)</label><input type="number" id="m-val" step="0.01" value="${c.valor}"></div>
+      <div class="form-group"><label>Vencimento</label><input type="date" id="m-venc" value="${c.vencimento}"></div>
+    </div>
+    <div class="form-group"><label>Categoria</label><input type="text" id="m-cat" value="${c.categoria||''}"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-success" onclick="atualizarReceber(${id})">Salvar</button>
+    </div>
+  </div>`);
+}
+
+async function atualizarReceber(id) {
+  const descricao = document.getElementById('m-desc').value.trim();
+  const valor = parseFloat(document.getElementById('m-val').value);
+  const vencimento = document.getElementById('m-venc').value;
+  const categoria = document.getElementById('m-cat').value;
+  await api('PUT', `/contas_receber/${id}`, { descricao, valor, vencimento, categoria });
+  closeModal();
+  loadReceber();
+}
+
+// ══════════════════════════════════════════════════════
+// CARTÕES
+// ══════════════════════════════════════════════════════
+const CORES = ['#6366f1','#ec4899','#f59e0b','#22c55e','#06b6d4','#8b5cf6','#ef4444','#14b8a6'];
+
+async function renderCartoes() {
+  const data = await api('GET', '/cartoes') || [];
+  cartoes = data;
+
+  const tiles = data.map(c => `
+    <div class="cartao-tile" style="background:linear-gradient(135deg,${c.cor}cc,${c.cor}88)">
+      <div>
+        <div class="cartao-nome">${c.nome}</div>
+        <div class="cartao-info">Limite: ${fmt(c.limite)}</div>
+        <div class="cartao-info">Fecha dia ${c.dia_fechamento} · Vence dia ${c.dia_vencimento}</div>
+      </div>
+      <div class="cartao-actions">
+        <button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff" onclick="modalEditCartao(${c.id})">✏️ Editar</button>
+        <button class="btn btn-sm" style="background:rgba(239,68,68,.4);color:#fff" onclick="delCartao(${c.id})">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header">
+      <h2 class="page-title">Cartões</h2>
+      ${data.length < 4 ? '<button class="btn btn-primary" onclick="modalNovoCartao()">+ Novo Cartão</button>' : '<span style="color:var(--muted);font-size:.875rem">Máximo de 4 cartões atingido</span>'}
+    </div>
+    <div class="cartoes-grid">${tiles || '<div style="color:var(--muted)">Nenhum cartão cadastrado.</div>'}</div>
+  `;
+}
+
+function corPicker() {
+  return CORES.map(c => `<div onclick="document.getElementById('m-cor').value='${c}'; document.querySelectorAll('.cor-dot').forEach(d=>d.style.outline='none'); this.style.outline='2px solid white'" class="cor-dot" style="width:24px;height:24px;border-radius:50%;background:${c};cursor:pointer;display:inline-block;margin:3px"></div>`).join('');
+}
+
+function modalNovoCartao() {
+  openModal(`<div class="modal">
+    <h2>Novo Cartão</h2>
+    <div class="form-group"><label>Nome *</label><input type="text" id="m-nome" placeholder="Ex: Nubank"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Limite (R$)</label><input type="number" id="m-limite" step="0.01" min="0" value="0"></div>
+      <div class="form-group"><label>Dia de fechamento</label><input type="number" id="m-fecha" min="1" max="31" value="1"></div>
+    </div>
+    <div class="form-group"><label>Dia de vencimento</label><input type="number" id="m-vence" min="1" max="31" value="10"></div>
+    <div class="form-group">
+      <label>Cor</label>
+      <input type="hidden" id="m-cor" value="${CORES[0]}">
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${corPicker()}</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarCartao()">Salvar</button>
+    </div>
+  </div>`);
+}
+
+async function salvarCartao() {
+  const nome = document.getElementById('m-nome').value.trim();
+  const limite = parseFloat(document.getElementById('m-limite').value) || 0;
+  const dia_fechamento = parseInt(document.getElementById('m-fecha').value);
+  const dia_vencimento = parseInt(document.getElementById('m-vence').value);
+  const cor = document.getElementById('m-cor').value;
+  if (!nome) return alert('Informe o nome do cartão.');
+  await api('POST', '/cartoes', { nome, limite, dia_fechamento, dia_vencimento, cor });
+  closeModal();
+  renderCartoes();
+}
+
+function modalEditCartao(id) {
+  const c = cartoes.find(x => x.id === id);
+  if (!c) return;
+  openModal(`<div class="modal">
+    <h2>Editar Cartão</h2>
+    <div class="form-group"><label>Nome</label><input type="text" id="m-nome" value="${c.nome}"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Limite (R$)</label><input type="number" id="m-limite" step="0.01" value="${c.limite}"></div>
+      <div class="form-group"><label>Dia fechamento</label><input type="number" id="m-fecha" min="1" max="31" value="${c.dia_fechamento}"></div>
+    </div>
+    <div class="form-group"><label>Dia vencimento</label><input type="number" id="m-vence" min="1" max="31" value="${c.dia_vencimento}"></div>
+    <div class="form-group">
+      <label>Cor</label>
+      <input type="hidden" id="m-cor" value="${c.cor}">
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${corPicker()}</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="atualizarCartao(${id})">Salvar</button>
+    </div>
+  </div>`);
+}
+
+async function atualizarCartao(id) {
+  const nome = document.getElementById('m-nome').value.trim();
+  const limite = parseFloat(document.getElementById('m-limite').value) || 0;
+  const dia_fechamento = parseInt(document.getElementById('m-fecha').value);
+  const dia_vencimento = parseInt(document.getElementById('m-vence').value);
+  const cor = document.getElementById('m-cor').value;
+  await api('PUT', `/cartoes/${id}`, { nome, limite, dia_fechamento, dia_vencimento, cor });
+  closeModal();
+  renderCartoes();
+}
+
+async function delCartao(id) {
+  if (!confirm('Excluir este cartão? Contas vinculadas perderão o vínculo.')) return;
+  await api('DELETE', `/cartoes/${id}`);
+  renderCartoes();
+}
+
+// ══════════════════════════════════════════════════════
+// CONTAS FIXAS
+// ══════════════════════════════════════════════════════
+let fixasCache = [];
+
+async function renderContasFixas() {
+  const data = await api('GET', '/contas_fixas') || [];
+  fixasCache = data;
+
+  const opts = cartoes.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header">
+      <h2 class="page-title">Contas Fixas</h2>
+      <button class="btn btn-primary" onclick="modalNovaFixa()">+ Nova Conta Fixa</button>
+    </div>
+    <p style="color:var(--muted);font-size:.875rem;margin-bottom:1.25rem">Modelos para gerar lotes de contas recorrentes (água, luz, internet…)</p>
+    <div class="table-wrap">
+      ${data.length === 0 ? '<div class="table-empty">Nenhuma conta fixa cadastrada.</div>' : `
+      <table>
+        <thead><tr><th>Descrição</th><th>Valor</th><th>Dia venc.</th><th>Cartão</th><th>Categoria</th><th></th></tr></thead>
+        <tbody>
+          ${data.map(c => `<tr>
+            <td>${c.descricao}</td>
+            <td><strong>${fmt(c.valor)}</strong></td>
+            <td>Dia ${c.dia_vencimento}</td>
+            <td>${c.cartao_id ? cartaoBadge(c) : '<span class="badge badge-gray">Sem cartão</span>'}</td>
+            <td>${c.categoria || '-'}</td>
+            <td><div class="td-actions">
+              <button class="btn btn-success btn-sm" onclick="modalGerarFixa(${c.id})">⚡ Gerar</button>
+              <button class="btn btn-ghost btn-sm" onclick="modalEditFixa(${c.id})">✏️</button>
+              <button class="btn btn-danger btn-sm" onclick="delFixa(${c.id})">🗑️</button>
+            </div></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`}
+    </div>
+  `;
+}
+
+function modalNovaFixa() {
+  const opts = cartoes.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+  openModal(`<div class="modal">
+    <h2>Nova Conta Fixa</h2>
+    <div class="form-group"><label>Descrição *</label><input type="text" id="m-desc" placeholder="Ex: Conta de água"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Valor (R$) *</label><input type="number" id="m-val" step="0.01" min="0"></div>
+      <div class="form-group"><label>Dia de vencimento *</label><input type="number" id="m-dia" min="1" max="31" placeholder="Ex: 10"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Cartão</label>
+        <select id="m-cartao"><option value="">Sem cartão</option>${opts}</select>
+      </div>
+      <div class="form-group"><label>Categoria</label><input type="text" id="m-cat" placeholder="Ex: Moradia"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarFixa()">Salvar</button>
+    </div>
+  </div>`);
+}
+
+async function salvarFixa() {
+  const descricao = document.getElementById('m-desc').value.trim();
+  const valor = parseFloat(document.getElementById('m-val').value);
+  const dia_vencimento = parseInt(document.getElementById('m-dia').value);
+  const cartao_id = document.getElementById('m-cartao').value || null;
+  const categoria = document.getElementById('m-cat').value;
+  if (!descricao || !valor || !dia_vencimento) return alert('Preencha os campos obrigatórios.');
+  await api('POST', '/contas_fixas', { descricao, valor, dia_vencimento, cartao_id, categoria });
+  closeModal();
+  renderContasFixas();
+}
+
+function modalEditFixa(id) {
+  const c = fixasCache.find(x => x.id === id);
+  if (!c) return;
+  const opts = cartoes.map(x => `<option value="${x.id}" ${x.id==c.cartao_id?'selected':''}>${x.nome}</option>`).join('');
+  openModal(`<div class="modal">
+    <h2>Editar Conta Fixa</h2>
+    <div class="form-group"><label>Descrição</label><input type="text" id="m-desc" value="${c.descricao}"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Valor (R$)</label><input type="number" id="m-val" step="0.01" value="${c.valor}"></div>
+      <div class="form-group"><label>Dia vencimento</label><input type="number" id="m-dia" min="1" max="31" value="${c.dia_vencimento}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Cartão</label>
+        <select id="m-cartao"><option value="">Sem cartão</option>${opts}</select>
+      </div>
+      <div class="form-group"><label>Categoria</label><input type="text" id="m-cat" value="${c.categoria||''}"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="atualizarFixa(${id})">Salvar</button>
+    </div>
+  </div>`);
+}
+
+async function atualizarFixa(id) {
+  const descricao = document.getElementById('m-desc').value.trim();
+  const valor = parseFloat(document.getElementById('m-val').value);
+  const dia_vencimento = parseInt(document.getElementById('m-dia').value);
+  const cartao_id = document.getElementById('m-cartao').value || null;
+  const categoria = document.getElementById('m-cat').value;
+  await api('PUT', `/contas_fixas/${id}`, { descricao, valor, dia_vencimento, cartao_id, categoria, ativo: 1 });
+  closeModal();
+  renderContasFixas();
+}
+
+async function delFixa(id) {
+  if (!confirm('Excluir esta conta fixa? As contas geradas não serão removidas.')) return;
+  await api('DELETE', `/contas_fixas/${id}`);
+  renderContasFixas();
+}
+
+// ── Modal Gerar Lote ──
+function modalGerarFixa(id) {
+  const c = fixasCache.find(x => x.id === id);
+  if (!c) return;
+  const mesAtual = currMonth();
+  openModal(`<div class="modal">
+    <h2>⚡ Gerar Parcelas — ${c.descricao}</h2>
+    <p style="color:var(--muted);font-size:.875rem;margin-bottom:1.25rem">Serão geradas contas em <strong>Contas a Pagar</strong> com vencimento todo dia <strong>${c.dia_vencimento}</strong>, valor <strong>${fmt(c.valor)}</strong>.</p>
+    <div class="form-row">
+      <div class="form-group"><label>Mês inicial *</label><input type="month" id="m-inicio" value="${mesAtual}"></div>
+      <div class="form-group"><label>Quantos meses? *</label><input type="number" id="m-meses" min="1" max="24" value="12"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-success" onclick="gerarFixa(${id})">Gerar contas</button>
+    </div>
+  </div>`);
+}
+
+async function gerarFixa(id) {
+  const mes_inicio = document.getElementById('m-inicio').value;
+  const meses = parseInt(document.getElementById('m-meses').value);
+  if (!mes_inicio || !meses) return alert('Preencha todos os campos.');
+  const r = await api('POST', `/contas_fixas/${id}/gerar`, { mes_inicio, meses });
+  if (r?.ok) { closeModal(); alert(`✅ ${r.geradas} conta(s) geradas com sucesso!`); }
+}
+
+// ── Init ──────────────────────────────────────────────
+if (token) {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  loadCartoes().then(() => navigate('dashboard'));
+}
+</script>
 </body>
 </html>
-``
