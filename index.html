@@ -165,7 +165,7 @@
 
 <script>
 // ── CONFIG ──────────────────────────────────────────
-const API_URL = 'https://financeiro-pessoal.christian-coliveira.workers.dev'; // ← altere aqui
+const API_URL = 'https://financeiro.SEU-USUARIO.workers.dev'; // ← altere aqui
 
 // ── STATE ───────────────────────────────────────────
 let token = localStorage.getItem('fin_token');
@@ -259,31 +259,145 @@ async function renderDashboard() {
   const data = await api('GET', '/dashboard');
   if (!data) return;
 
-  document.getElementById('main-content').innerHTML = `
-    <h2 class="page-title" style="margin-bottom:1.5rem">Dashboard</h2>
-    <div class="cards-grid">
+  const mes = data.mes?.pagar || {};
+  const mesRec = data.mes?.receber || {};
+  const progPct = mes.total > 0 ? Math.round((mes.pago / mes.total) * 100) : 0;
+  const saldo = (mesRec.total || 0) - (mes.total || 0);
+  const saldoCor = saldo >= 0 ? 'var(--green)' : 'var(--red)';
+  const hoje = today();
+
+  // Alerta vencidos
+  const vencAlerta = data.vencidos?.qtd > 0 ? `
+    <div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:.75rem;padding:1rem 1.25rem;margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between">
+      <span style="color:var(--red);font-size:.875rem">🚨 <strong>${data.vencidos.qtd} conta(s) vencida(s)</strong> em aberto</span>
+      <span style="color:var(--red);font-weight:700">${fmt(data.vencidos.total)}</span>
+    </div>` : '';
+
+  // Cards superiores
+  const cards = `
+    <div class="cards-grid" style="grid-template-columns:repeat(4,1fr)">
       <div class="stat-card">
-        <div class="stat-label">Total a Pagar</div>
+        <div class="stat-label">A Pagar (geral)</div>
         <div class="stat-value red">${fmt(data.totalPagar)}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Total a Receber</div>
+        <div class="stat-label">A Receber (geral)</div>
         <div class="stat-value green">${fmt(data.totalReceber)}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Vence em 30 dias (pagar)</div>
+        <div class="stat-label">Vence em 30 dias</div>
         <div class="stat-value yellow">${fmt(data.pagar30)}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Vence em 30 dias (receber)</div>
+        <div class="stat-label">A Receber em 30 dias</div>
         <div class="stat-value blue">${fmt(data.receber30)}</div>
       </div>
+    </div>`;
+
+  // Seção do mês atual
+  const mesNome = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+  const secaoMes = `
+    <div style="font-size:.78rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">📅 ${mesNome}</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.25rem">
+      <div class="stat-card">
+        <div class="stat-label">Total do mês</div>
+        <div class="stat-value" style="font-size:1.4rem">${fmt(mes.total)}</div>
+        <div style="font-size:.78rem;color:var(--muted);margin-top:.4rem">${mes.qtd || 0} conta(s)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Já pago</div>
+        <div class="stat-value green" style="font-size:1.4rem">${fmt(mes.pago)}</div>
+        <div style="font-size:.78rem;color:var(--muted);margin-top:.4rem">${mes.qtd_pagas || 0} de ${mes.qtd || 0} contas</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Saldo projetado</div>
+        <div class="stat-value" style="font-size:1.4rem;color:${saldoCor}">${fmt(saldo)}</div>
+        <div style="font-size:.78rem;color:var(--muted);margin-top:.4rem">receber − pagar</div>
+      </div>
     </div>
+
+    <div class="chart-card" style="margin-bottom:1.25rem;padding:1.25rem">
+      <div style="display:flex;justify-content:space-between;margin-bottom:.6rem">
+        <span style="font-size:.8rem;color:var(--muted);font-weight:600">PROGRESSO DE PAGAMENTO</span>
+        <span style="font-size:.8rem;font-weight:700;color:${progPct>=100?'var(--green)':'var(--text)'}">${progPct}%</span>
+      </div>
+      <div style="background:var(--border);border-radius:9999px;height:10px;overflow:hidden">
+        <div style="height:100%;width:${progPct}%;background:${progPct>=100?'var(--green)':progPct>=50?'var(--primary)':'var(--yellow)'};border-radius:9999px;transition:width .4s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:.5rem;font-size:.75rem;color:var(--muted)">
+        <span>Pago: ${fmt(mes.pago)}</span>
+        <span>Pendente: <span style="color:var(--red)">${fmt(mes.pendente)}</span></span>
+      </div>
+    </div>`;
+
+  // Por cartão
+  const porCartaoHtml = data.porCartao?.length ? `
+    <div class="chart-card" style="margin-bottom:1.25rem">
+      <div class="chart-title">Gastos por cartão — mês atual</div>
+      ${data.porCartao.map(c => {
+        const pct = c.total > 0 ? Math.round((c.pago / c.total) * 100) : 0;
+        const cor = c.cor || '#6366f1';
+        const nome = c.nome || 'Dinheiro/Débito';
+        return `
+          <div style="margin-bottom:.9rem">
+            <div style="display:flex;justify-content:space-between;margin-bottom:.35rem">
+              <span style="font-size:.875rem;font-weight:500">${nome}</span>
+              <span style="font-size:.875rem"><strong>${fmt(c.total)}</strong> <span style="color:var(--muted);font-size:.78rem">(${fmt(c.pago)} pago)</span></span>
+            </div>
+            <div style="background:var(--border);border-radius:9999px;height:7px;overflow:hidden">
+              <div style="height:100%;width:${pct}%;background:${cor};border-radius:9999px"></div>
+            </div>
+          </div>`;
+      }).join('')}
+    </div>` : '';
+
+  // Próximos vencimentos
+  const proxHtml = data.proximosVenc?.length ? `
+    <div class="chart-card" style="margin-bottom:1.25rem">
+      <div class="chart-title">⏰ Vencendo nos próximos 7 dias</div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          <th style="text-align:left;font-size:.75rem;color:var(--muted);padding:.4rem 0;padding-right:1rem">Descrição</th>
+          <th style="text-align:left;font-size:.75rem;color:var(--muted);padding:.4rem 0;padding-right:1rem">Vencimento</th>
+          <th style="text-align:left;font-size:.75rem;color:var(--muted);padding:.4rem 0;padding-right:1rem">Cartão</th>
+          <th style="text-align:right;font-size:.75rem;color:var(--muted);padding:.4rem 0">Valor</th>
+        </tr></thead>
+        <tbody>
+          ${data.proximosVenc.map(c => {
+            const isHj = c.vencimento === hoje;
+            return `<tr style="border-top:1px solid var(--border)">
+              <td style="padding:.55rem 0;padding-right:1rem;font-size:.875rem">
+                ${c.descricao}
+                ${c.total_parcelas > 1 ? `<span class="badge badge-gray" style="margin-left:.35rem">${c.parcela_atual}/${c.total_parcelas}</span>` : ''}
+              </td>
+              <td style="padding:.55rem 0;padding-right:1rem;font-size:.875rem">
+                <span style="color:${isHj?'var(--yellow)':'var(--text)'};font-weight:${isHj?'700':'400'}">${fmtDate(c.vencimento)}${isHj?' 🔔':''}</span>
+              </td>
+              <td style="padding:.55rem 0;padding-right:1rem;font-size:.875rem">
+                ${c.cartao_nome ? `<span class="badge" style="background:${c.cartao_cor}28;color:${c.cartao_cor}">${c.cartao_nome}</span>` : '<span class="badge badge-gray">-</span>'}
+              </td>
+              <td style="padding:.55rem 0;text-align:right;font-weight:700;font-size:.875rem">${fmt(c.valor)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>` : '';
+
+  // Gráfico fluxo
+  const grafico = `
     <div class="chart-card">
-      <div class="chart-title">Fluxo Mensal — Contas a Pagar</div>
+      <div class="chart-title">Fluxo mensal — últimos 6 meses</div>
       <canvas id="chart-fluxo" height="90"></canvas>
+    </div>`;
+
+  document.getElementById('main-content').innerHTML = `
+    <h2 class="page-title" style="margin-bottom:1.25rem">Dashboard</h2>
+    ${vencAlerta}
+    ${cards}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-top:0">
+      <div>${secaoMes}${proxHtml}</div>
+      <div>${porCartaoHtml}${grafico}</div>
     </div>
-    ${data.vencendoHoje > 0 ? `<div style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:.75rem;padding:1rem;color:var(--yellow);font-size:.875rem">⚠️ Você tem <strong>${data.vencendoHoje} conta(s)</strong> vencendo hoje!</div>` : ''}
   `;
 
   if (chartRef) chartRef.destroy();
