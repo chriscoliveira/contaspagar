@@ -211,6 +211,7 @@ async function login() {
     document.getElementById('app').style.display = 'flex';
     await loadCartoes();
     navigate('dashboard');
+    notificarVencimentos();
   } else {
     document.getElementById('login-erro').style.display = 'block';
   }
@@ -993,11 +994,39 @@ async function gerarFixa(id) {
   if (r?.ok) { closeModal(); alert(`✅ ${r.geradas} conta(s) geradas com sucesso!`); }
 }
 
+// ── Notificações de vencimento ────────────────────────
+async function notificarVencimentos() {
+  if (!('Notification' in window)) return;
+
+  // Pede permissão (só aparece na primeira vez)
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') return;
+
+  const amanha = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
+  const mes = amanha.slice(0, 7);
+
+  const data = await api('GET', `/contas_pagar?mes=${mes}&pago=0`);
+  if (!data) return;
+
+  const vencemAmanha = data.filter(c => c.vencimento === amanha);
+  if (vencemAmanha.length === 0) return;
+
+  // Uma notificação agrupada com todas as contas
+  const total = vencemAmanha.reduce((s, c) => s + c.valor, 0);
+  const lista = vencemAmanha.map(c => `• ${c.descricao} — ${fmt(c.valor)}`).join('\n');
+
+  new Notification(`💰 ${vencemAmanha.length} conta(s) vencem amanhã — ${fmt(total)}`, {
+    body: lista,
+    icon: 'https://em-content.zobj.net/source/apple/391/money-bag_1f4b0.png',
+    tag: 'fin-vencimentos', // evita duplicar se abrir várias abas
+  });
+}
+
 // ── Init ──────────────────────────────────────────────
 if (token) {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
-  loadCartoes().then(() => navigate('dashboard'));
+  loadCartoes().then(() => { navigate('dashboard'); notificarVencimentos(); });
 }
 </script>
 </body>
