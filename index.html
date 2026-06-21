@@ -155,6 +155,7 @@
     <div class="nav-item" data-page="cartoes" onclick="navigate('cartoes')">💳 Cartões</div>
     <div class="nav-item" data-page="fixas" onclick="navigate('fixas')">🔁 Contas Fixas</div>
     <div class="sidebar-sep"></div>
+    <div class="nav-item" id="btn-notif" onclick="ativarNotificacoes()" title="Ativar alertas de vencimento">🔔 Ativar alertas</div>
     <div class="nav-item" onclick="logout()">🚪 Sair</div>
   </aside>
   <main class="main" id="main-content"></main>
@@ -211,7 +212,6 @@ async function login() {
     document.getElementById('app').style.display = 'flex';
     await loadCartoes();
     navigate('dashboard');
-    notificarVencimentos();
   } else {
     document.getElementById('login-erro').style.display = 'block';
   }
@@ -995,12 +995,26 @@ async function gerarFixa(id) {
 }
 
 // ── Notificações de vencimento ────────────────────────
-async function notificarVencimentos() {
-  if (!('Notification' in window)) return;
+async function ativarNotificacoes() {
+  if (!('Notification' in window)) {
+    alert('Seu navegador não suporta notificações.');
+    return;
+  }
 
-  // Pede permissão (só aparece na primeira vez)
   const perm = await Notification.requestPermission();
-  if (perm !== 'granted') return;
+  const btn = document.getElementById('btn-notif');
+
+  if (perm === 'granted') {
+    if (btn) btn.textContent = '🔔 Alertas ativos';
+    await notificarVencimentos();
+  } else {
+    if (btn) btn.textContent = '🔕 Alertas bloqueados';
+    alert('Permissão negada. Habilite notificações nas configurações do navegador.');
+  }
+}
+
+async function notificarVencimentos() {
+  if (Notification.permission !== 'granted') return;
 
   const amanha = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
   const mes = amanha.slice(0, 7);
@@ -1009,16 +1023,18 @@ async function notificarVencimentos() {
   if (!data) return;
 
   const vencemAmanha = data.filter(c => c.vencimento === amanha);
-  if (vencemAmanha.length === 0) return;
+  if (vencemAmanha.length === 0) {
+    new Notification('💰 Financeiro', { body: 'Nenhuma conta vencendo amanhã. ✅' });
+    return;
+  }
 
-  // Uma notificação agrupada com todas as contas
   const total = vencemAmanha.reduce((s, c) => s + c.valor, 0);
   const lista = vencemAmanha.map(c => `• ${c.descricao} — ${fmt(c.valor)}`).join('\n');
 
   new Notification(`💰 ${vencemAmanha.length} conta(s) vencem amanhã — ${fmt(total)}`, {
     body: lista,
     icon: 'https://em-content.zobj.net/source/apple/391/money-bag_1f4b0.png',
-    tag: 'fin-vencimentos', // evita duplicar se abrir várias abas
+    tag: 'fin-vencimentos',
   });
 }
 
@@ -1026,7 +1042,14 @@ async function notificarVencimentos() {
 if (token) {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
-  loadCartoes().then(() => { navigate('dashboard'); notificarVencimentos(); });
+  loadCartoes().then(() => {
+    navigate('dashboard');
+    // Atualiza texto do botão se já tiver permissão concedida antes
+    if (Notification.permission === 'granted') {
+      const btn = document.getElementById('btn-notif');
+      if (btn) btn.textContent = '🔔 Alertas ativos';
+    }
+  });
 }
 </script>
 </body>
