@@ -450,6 +450,7 @@ async function renderContasPagar() {
           <option value="">Todos</option>
           <option value="0">Pendente</option>
           <option value="1">Pago</option>
+          <option value="vencidas">⚠️ Vencidas</option>
         </select>
       </div>
       <div class="fg"><label>Ciclo de vencimento</label>
@@ -475,9 +476,13 @@ function setCiclo(v, el) {
 
 async function loadPagar() {
   const p = new URLSearchParams();
-  if (pagarF.mes) p.set('mes', pagarF.mes);
+  const isVencidas = pagarF.pago === 'vencidas';
+
+  // Se for "vencidas", ignora o filtro de mês
+  if (pagarF.mes && !isVencidas) p.set('mes', pagarF.mes);
   if (pagarF.cartao_id) p.set('cartao_id', pagarF.cartao_id);
-  if (pagarF.pago !== '') p.set('pago', pagarF.pago);
+  if (isVencidas) p.set('vencidas', '1');
+  else if (pagarF.pago !== '') p.set('pago', pagarF.pago);
   if (pagarF.ciclo) p.set('ciclo', pagarF.ciclo);
 
   const data = await api('GET', `/contas_pagar?${p}`);
